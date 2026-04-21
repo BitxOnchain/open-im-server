@@ -53,6 +53,7 @@ type Config struct {
 	WebhooksConfig     config.Webhooks
 	LocalCacheConfig   config.LocalCache
 	Discovery          config.Discovery
+	CronTask           config.CronTask
 }
 
 // MsgServer encapsulates dependencies required for message handling.
@@ -70,6 +71,7 @@ type msgServer struct {
 	config                 *Config                          // Global configuration settings.
 	webhookClient          *webhook.Client
 	conversationClient     *rpcli.ConversationClient
+	e2eeProcessor          *E2EEMessageProcessor // E2EE message processor
 
 	adminUserIDs []string
 }
@@ -151,6 +153,7 @@ func Start(ctx context.Context, config *Config, client discovery.SvcDiscoveryReg
 
 	s.notificationSender = notification.NewNotificationSender(&config.NotificationConfig, notification.WithLocalSendMsg(s.SendMsg))
 	s.msgNotificationSender = NewMsgNotificationSender(config, notification.WithLocalSendMsg(s.SendMsg))
+	s.e2eeProcessor = NewE2EEMessageProcessor()
 
 	msg.RegisterMsgServer(server, s)
 

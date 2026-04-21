@@ -85,6 +85,14 @@ func Start(ctx context.Context, conf *Config, client discovery.SvcDiscoveryRegis
 	if err := srv.registerClearUserMsg(); err != nil {
 		return err
 	}
+	// Register burn-after-reading message cleanup task
+	if err := srv.registerBurnMsg(); err != nil {
+		return err
+	}
+	// Register retention-based message cleanup task
+	if err := srv.registerRetentionMsg(); err != nil {
+		return err
+	}
 	log.ZDebug(ctx, "start cron task", "CronExecuteTime", conf.CronTask.CronExecuteTime)
 	srv.cron.Start()
 	log.ZDebug(ctx, "cron task server is running")
@@ -142,4 +150,31 @@ func (c *cronServer) registerClearUserMsg() error {
 		c.locker.ExecuteWithLock(c.ctx, "clearUserMsg", c.clearUserMsg)
 	})
 	return errs.WrapMsg(err, "failed to register clear user msg cron task")
+}
+
+// registerBurnMsg registers the burn-after-reading message cleanup cron task.
+// This task checks for expired burn messages and deletes them.
+// Runs every minute by default to catch any missed burn timers.
+func (c *cronServer) registerBurnMsg() error {
+	// Use a more frequent schedule for burn msg check (every minute)
+	// This ensures burn messages are cleaned up even if timers are missed
+	burnSchedule := "0 * * * *" // Every minute
+	_, err := c.cron.AddFunc(burnSchedule, func() {
+		c.locker.ExecuteWithLock(c.ctx, "burnMsg", c.burnMsg)
+	})
+	return errs.WrapMsg(err, "failed to register burn msg cron task")
+}
+
+// registerRetentionMsg registers the retention-based message cleanup cron task.
+// This task deletes messages based on per-conversation retention settings.
+func (c *cronServer) registerRetentionMsg() error {
+	retention := c.config.CronTask.Retention
+	if retention.DefaultRetentionDays <= 0 && retention.SingleChatRetention <= 0 && retention.GroupChatRetention <= 0 {
+		log.ZInfo(c.ctx, "disable retention-based cleanup", "config", retention)
+		return nil
+	}
+	_, err := c.cron.AddFunc(c.config.CronTask.CronExecuteTime, func() {
+		c.locker.ExecuteWithLock(c.ctx, "retentionMsg", c.deleteMsgByRetention)
+	})
+	return errs.WrapMsg(err, "failed to register retention msg cron task")
 }

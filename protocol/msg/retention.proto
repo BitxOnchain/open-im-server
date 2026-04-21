@@ -1,0 +1,76 @@
+// Copyright © 2023 OpenIM. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OF CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package msg;
+option go_package = "github.com/openimsdk/protocol/msg";
+
+// GetRetentionConfigReq 获取保留配置请求
+message GetRetentionConfigReq {}
+
+// GetRetentionConfigResp 获取保留配置响应
+message GetRetentionConfigResp {
+  int64 defaultRetentionDays = 1;  // 全局默认天数
+  int64 minRetentionDays = 2;      // 最小天数
+  int64 maxRetentionDays = 3;      // 最大天数
+  int64 singleChatRetention = 4;   // 单聊默认
+  int64 groupChatRetention = 5;    // 群聊默认
+}
+
+// SetConversationRetentionReq 设置会话保留天数请求
+message SetConversationRetentionReq {
+  string conversationID = 1;
+  string ownerUserID = 2;
+  int64 retentionDays = 3;
+}
+
+// SetConversationRetentionResp 设置会话保留天数响应
+message SetConversationRetentionResp {}
+
+// GetConversationRetentionReq 获取会话保留天数请求
+message GetConversationRetentionReq {
+  string conversationID = 1;
+  string ownerUserID = 2;
+}
+
+// GetConversationRetentionResp 获取会话保留天数响应
+message GetConversationRetentionResp {
+  string conversationID = 1;
+  int64 retentionDays = 2;
+  string sourceRetention = 3;     // 保留天数来源
+  int32 conversationType = 4;
+}
+
+// DestructMsgsByRetentionReq 按保留时间清理消息请求
+message DestructMsgsByRetentionReq {
+  string conversationID = 1;      // 会话ID，为空则清理所有
+  string ownerUserID = 2;         // 所有者用户ID
+  int64 retentionDays = 3;        // 保留天数，为0则使用会话配置
+  int64 limit = 4;                 // 每次清理的限制
+}
+
+// DestructMsgsByRetentionResp 按保留时间清理消息响应
+message DestructMsgsByRetentionResp {
+  int64 count = 1;                 // 删除的消息数
+  int64 skipped = 2;              // 跳过的消息数
+  int64 delTime = 3;              // 删除的时间点
+}
+
+// GetRetentionOptionsReq 获取保留天数选项请求
+message GetRetentionOptionsReq {}
+
+// GetRetentionOptionsResp 获取保留天数选项响应
+message GetRetentionOptionsResp {
+  repeated int64 options = 1;     // 可用的保留天数选项
+}

@@ -1,0 +1,53 @@
+# Custom Configuration for OpenIM
+# 定制功能配置文件
+
+# E2E Encryption Settings / E2E加密设置
+e2eEncryption:
+  # Enable E2E encryption by default for all conversations
+  # 是否默认启用E2E加密
+  enabled: false
+  # Default encryption key version
+  # 默认加密密钥版本
+  defaultKeyVersion: 1
+  # Key rotation interval (days)
+  # 密钥轮换周期（天）
+  keyRotationDays: 90
+
+# Burn After Read Settings / 阅后即焚设置
+burnAfterRead:
+  # Enable burn after read feature
+  # 是否启用阅后即焚功能
+  enabled: true
+  # Default burn duration in seconds (0 = disabled by default)
+  # 默认销毁时间（秒），0表示默认不启用
+  defaultDuration: 30
+  # Minimum allowed burn duration (seconds)
+  # 最小允许销毁时间（秒）
+  minDuration: 5
+  # Maximum allowed burn duration (seconds)
+  # 最大允许销毁时间（秒）
+  maxDuration: 300
+
+# Message Retention Settings / 消息保留设置
+messageRetention:
+  # Enable automatic message cleanup
+  # 是否启用自动消息清理
+  enabled: true
+  # Default retention period in days for single chat
+  # 单聊默认保留天数
+  singleChatDefaultDays: 90
+  # Default retention period in days for group chat
+  # 群聊默认保留天数
+  groupChatDefaultDays: 90
+  # Minimum retention period in days
+  # 最小保留天数
+  minRetentionDays: 1
+  # Maximum retention period in days
+  # 最大保留天数
+  maxRetentionDays: 365
+  # Cleanup schedule (cron expression)
+  # 清理计划（cron表达式）
+  cleanupSchedule: "0 2 * * *"  # Run at 2:00 AM daily / 每天凌晨2点执行
+  # Enable cleanup of media files
+  # 是否清理媒体文件
+  cleanupMedia: true

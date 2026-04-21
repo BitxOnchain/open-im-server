@@ -162,11 +162,24 @@ type CircuitBreaker struct {
 	Request int64         `yaml:"request"`
 }
 
+// RetentionOptions 定义保留天数的选项档位
+var RetentionOptions = []int64{7, 30, 90, 180, 365, 0} // 0表示永久
+
+type RetentionConfig struct {
+	DefaultRetentionDays  int64            `yaml:"defaultRetentionDays"`  // 全局默认天数
+	MinRetentionDays      int64            `yaml:"minRetentionDays"`      // 最小天数
+	MaxRetentionDays      int64            `yaml:"maxRetentionDays"`      // 最大天数
+	SingleChatRetention   int64            `yaml:"singleChatRetention"`   // 单聊默认天数
+	GroupChatRetention    int64            `yaml:"groupChatRetention"`    // 群聊默认天数
+	ConversationOverrides map[string]int64 `yaml:"conversationOverrides"` // 会话级别覆盖
+}
+
 type CronTask struct {
-	CronExecuteTime   string   `yaml:"cronExecuteTime"`
-	RetainChatRecords int      `yaml:"retainChatRecords"`
-	FileExpireTime    int      `yaml:"fileExpireTime"`
-	DeleteObjectType  []string `yaml:"deleteObjectType"`
+	CronExecuteTime   string          `yaml:"cronExecuteTime"`
+	RetainChatRecords int             `yaml:"retainChatRecords"`
+	FileExpireTime    int             `yaml:"fileExpireTime"`
+	DeleteObjectType  []string        `yaml:"deleteObjectType"`
+	Retention         RetentionConfig `yaml:"retention"`
 }
 
 type OfflinePushConfig struct {
@@ -521,6 +534,39 @@ type Webhooks struct {
 	AfterCreateGroupChatConversations   AfterConfig  `yaml:"afterCreateGroupChatConversations"`
 }
 
+// CustomConfig 定制功能全局配置
+type CustomConfig struct {
+	E2EEncryption    E2EEncryptionConfig    `yaml:"e2eEncryption"`
+	BurnAfterRead    BurnAfterReadConfig    `yaml:"burnAfterRead"`
+	MessageRetention MessageRetentionConfig `yaml:"messageRetention"`
+}
+
+// E2EEncryptionConfig E2E加密全局配置
+type E2EEncryptionConfig struct {
+	Enabled           bool  `yaml:"enabled"`
+	DefaultKeyVersion int32 `yaml:"defaultKeyVersion"`
+	KeyRotationDays   int32 `yaml:"keyRotationDays"`
+}
+
+// BurnAfterReadConfig 阅后即焚全局配置
+type BurnAfterReadConfig struct {
+	Enabled         bool  `yaml:"enabled"`
+	DefaultDuration int32 `yaml:"defaultDuration"`
+	MinDuration     int32 `yaml:"minDuration"`
+	MaxDuration     int32 `yaml:"maxDuration"`
+}
+
+// MessageRetentionConfig 消息保留全局配置
+type MessageRetentionConfig struct {
+	Enabled               bool   `yaml:"enabled"`
+	SingleChatDefaultDays int32  `yaml:"singleChatDefaultDays"`
+	GroupChatDefaultDays  int32  `yaml:"groupChatDefaultDays"`
+	MinRetentionDays      int32  `yaml:"minRetentionDays"`
+	MaxRetentionDays      int32  `yaml:"maxRetentionDays"`
+	CleanupSchedule       string `yaml:"cleanupSchedule"`
+	CleanupMedia          bool   `yaml:"cleanupMedia"`
+}
+
 type ZooKeeper struct {
 	Schema   string   `yaml:"schema"`
 	Address  []string `yaml:"address"`
@@ -778,6 +824,7 @@ type AllConfig struct {
 	Redis        Redis
 	Share        Share
 	Webhooks     Webhooks
+	Custom       CustomConfig
 }
 
 func (a *AllConfig) Name2Config(name string) any {
@@ -826,6 +873,8 @@ func (a *AllConfig) Name2Config(name string) any {
 		return a.Share
 	case a.Webhooks.GetConfigFileName():
 		return a.Webhooks
+	case a.Custom.GetConfigFileName():
+		return a.Custom
 	default:
 		return nil
 	}
@@ -855,6 +904,7 @@ func (a *AllConfig) GetConfigNames() []string {
 		a.Redis.GetConfigFileName(),
 		a.Share.GetConfigFileName(),
 		a.Webhooks.GetConfigFileName(),
+		a.Custom.GetConfigFileName(),
 	}
 }
 
@@ -882,6 +932,7 @@ const (
 	RedisConfigFileName              = "redis.yml"
 	ShareFileName                    = "share.yml"
 	WebhooksConfigFileName           = "webhooks.yml"
+	CustomConfigFileName             = "custom-config.yml"
 )
 
 func (d *Discovery) GetConfigFileName() string {
@@ -970,4 +1021,8 @@ func (s *Share) GetConfigFileName() string {
 
 func (w *Webhooks) GetConfigFileName() string {
 	return WebhooksConfigFileName
+}
+
+func (c *CustomConfig) GetConfigFileName() string {
+	return CustomConfigFileName
 }

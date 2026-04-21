@@ -1,0 +1,223 @@
+// Copyright © 2024 OpenIM. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package custom;
+
+option go_package = "github.com/openimsdk/open-im-server/v3/pkg/custom/protocol";
+
+import "sdkws/sdkws.proto";
+
+// ============================================================
+// E2E Encryption Configuration (Session Level)
+// ============================================================
+
+// E2E Encryption settings for a single conversation
+message E2EEncryptionConfig {
+  bool   enabled = 1;           // Whether E2E encryption is enabled for this conversation
+  int32  key_index = 2;         // Current encryption key index
+  int64  updated_at = 3;         // Last update timestamp (milliseconds)
+}
+
+// Request to set E2E encryption for a conversation
+message SetE2EEncryptionReq {
+  string conversation_id = 1;   // Target conversation ID
+  bool   enabled = 2;           // Enable or disable E2E encryption
+  int32  key_index = 3;         // Encryption key index to use
+}
+
+// Response for E2E encryption setting
+message SetE2EEncryptionResp {
+  int32  err_code = 1;
+  string err_msg = 2;
+  E2EEncryptionConfig config = 3;
+}
+
+// Request to get E2E encryption status
+message GetE2EEncryptionReq {
+  repeated string conversation_ids = 1;  // List of conversation IDs to query
+}
+
+// Response with E2E encryption statuses
+message GetE2EEncryptionResp {
+  int32 err_code = 1;
+  string err_msg = 2;
+  map<string, E2EEncryptionConfig> configs = 3;  // conversation_id -> config
+}
+
+// ============================================================
+// Burn After Read (Message Destruct) Configuration
+// ============================================================
+
+// Burn after read settings for a single message
+message MessageBurnConfig {
+  bool  is_burn = 1;           // Whether this message should burn after read
+  int32 burn_duration = 2;      // Duration in seconds before the message is destroyed
+  int64 set_at = 3;            // Timestamp when burn was set (milliseconds)
+}
+
+// Request to send a message with burn after read
+message SendBurnMessageReq {
+  sdkws.MsgData msg = 1;        // Base message data
+  bool is_burn = 2;             // Enable burn after read for this message
+  int32 burn_duration = 3;      // Custom burn duration (overrides conversation default)
+}
+
+// Response for burn message sending
+message SendBurnMessageResp {
+  int32 err_code = 1;
+  string err_msg = 2;
+  string client_msg_id = 3;
+  string server_msg_id = 4;
+  int64 send_time = 5;
+}
+
+// Request to set conversation-level burn settings
+message SetConversationBurnReq {
+  string conversation_id = 1;   // Target conversation ID
+  bool   is_burn_enabled = 2;   // Enable burn after read by default
+  int32  default_burn_duration = 3;  // Default burn duration in seconds
+}
+
+// Response for conversation burn setting
+message SetConversationBurnResp {
+  int32 err_code = 1;
+  string err_msg = 2;
+}
+
+// Request to get conversation burn settings
+message GetConversationBurnReq {
+  repeated string conversation_ids = 1;  // List of conversation IDs
+}
+
+// Response with conversation burn settings
+message GetConversationBurnResp {
+  int32 err_code = 1;
+  string err_msg = 2;
+  map<string, ConversationBurnConfig> configs = 3;
+}
+
+// Conversation-level burn configuration
+message ConversationBurnConfig {
+  bool  is_burn_enabled = 1;        // Whether burn is enabled by default
+  int32 default_burn_duration = 2;   // Default burn duration in seconds
+  int64 updated_at = 3;              // Last update timestamp
+}
+
+// ============================================================
+// Message Retention (Auto Cleanup) Configuration
+// ============================================================
+
+// Global message retention policy
+message RetentionPolicy {
+  int32 default_retention_days = 1;   // Default retention period in days
+  int32 min_retention_days = 2;       // Minimum allowed retention days
+  int32 max_retention_days = 3;       // Maximum allowed retention days
+  bool  enabled = 4;                  // Whether auto-cleanup is enabled
+}
+
+// Request to set retention policy for a conversation
+message SetRetentionReq {
+  string conversation_id = 1;    // Target conversation ID
+  int32  retention_days = 2;     // Retention period in days (0 = use global default)
+}
+
+// Response for retention setting
+message SetRetentionResp {
+  int32 err_code = 1;
+  string err_msg = 2;
+}
+
+// Request to get retention settings
+message GetRetentionReq {
+  repeated string conversation_ids = 1;  // List of conversation IDs
+}
+
+// Response with retention settings
+message GetRetentionResp {
+  int32 err_code = 1;
+  string err_msg = 2;
+  map<string, ConversationRetention> retentions = 3;  // conversation_id -> retention
+  RetentionPolicy global_policy = 4;                   // Global retention policy
+}
+
+// Conversation-level retention settings
+message ConversationRetention {
+  int32 retention_days = 1;   // Retention period for this conversation (0 = use global)
+  int64 updated_at = 2;       // Last update timestamp
+  int64 deleted_until = 3;   // Messages older than this will be cleaned up (timestamp)
+}
+
+// Request to trigger manual cleanup
+message TriggerCleanupReq {
+  string conversation_id = 1;    // Target conversation (empty = all conversations)
+  bool   force = 2;              // Force cleanup even if not scheduled
+}
+
+// Response for cleanup trigger
+message TriggerCleanupResp {
+  int32 err_code = 1;
+  string err_msg = 2;
+  int64  deleted_count = 3;      // Number of messages deleted
+}
+
+// ============================================================
+// Global Configuration Management
+// ============================================================
+
+// Request to update global retention policy
+message SetGlobalRetentionPolicyReq {
+  RetentionPolicy policy = 1;    // New retention policy
+}
+
+// Response for global policy update
+message SetGlobalRetentionPolicyResp {
+  int32 err_code = 1;
+  string err_msg = 2;
+  RetentionPolicy policy = 3;    // Updated policy
+}
+
+// Request to get global retention policy
+message GetGlobalRetentionPolicyReq {
+}
+
+// Response with global retention policy
+message GetGlobalRetentionPolicyResp {
+  int32 err_code = 1;
+  string err_msg = 2;
+  RetentionPolicy policy = 3;
+}
+
+// ============================================================
+// Service Definition
+// ============================================================
+
+service CustomConfigRPC {
+  // E2E Encryption APIs
+  rpc SetE2EEncryption(SetE2EEncryptionReq) returns (SetE2EEncryptionResp);
+  rpc GetE2EEncryption(GetE2EEncryptionReq) returns (GetE2EEncryptionResp);
+
+  // Burn After Read APIs
+  rpc SetConversationBurn(SetConversationBurnReq) returns (SetConversationBurnResp);
+  rpc GetConversationBurn(GetConversationBurnReq) returns (GetConversationBurnResp);
+  rpc SendBurnMessage(SendBurnMessageReq) returns (SendBurnMessageResp);
+
+  // Message Retention APIs
+  rpc SetRetention(SetRetentionReq) returns (SetRetentionResp);
+  rpc GetRetention(GetRetentionReq) returns (GetRetentionResp);
+  rpc SetGlobalRetentionPolicy(SetGlobalRetentionPolicyReq) returns (SetGlobalRetentionPolicyResp);
+  rpc GetGlobalRetentionPolicy(GetGlobalRetentionPolicyReq) returns (GetGlobalRetentionPolicyResp);
+  rpc TriggerCleanup(TriggerCleanupReq) returns (TriggerCleanupResp);
+}

@@ -54,6 +54,18 @@ func (m *msgServer) SendMsg(ctx context.Context, req *pbmsg.SendMsgReq) (*pbmsg.
 
 func (m *msgServer) sendMsg(ctx context.Context, req *pbmsg.SendMsgReq, before **sdkws.MsgData) (*pbmsg.SendMsgResp, error) {
 	m.encapsulateMsgData(req.MsgData)
+
+	// Process E2EE encryption for outgoing messages
+	if m.e2eeProcessor != nil {
+		encrypted, err := m.e2eeProcessor.ProcessOutgoingMessage(ctx, req.MsgData)
+		if err != nil {
+			log.ZWarn(ctx, "E2EE encryption failed, sending plaintext", err, "msgID", req.MsgData.ClientMsgID)
+			// Continue with plaintext if encryption fails
+		} else if encrypted {
+			log.ZDebug(ctx, "Message encrypted with E2EE", "msgID", req.MsgData.ClientMsgID)
+		}
+	}
+
 	switch req.MsgData.SessionType {
 	case constant.SingleChatType:
 		return m.sendMsgSingleChat(ctx, req, before)

@@ -2,3 +2,12 @@ cronExecuteTime: 0 2 * * *
 retainChatRecords: 365
 fileExpireTime: 180
 deleteObjectType: ["msg-picture","msg-file", "msg-voice","msg-video","msg-video-snapshot","sdklog"]
+
+# 自定义消息保留配置
+retention:
+  defaultRetentionDays: 365     # 全局默认保留天数
+  minRetentionDays: 7          # 最小保留天数
+  maxRetentionDays: 365         # 最大保留天数（0表示永久）
+  singleChatRetention: 365     # 单聊默认保留天数
+  groupChatRetention: 180      # 群聊默认保留天数
+  conversationOverrides: {}      # 会话级别覆盖，格式: {"conversation_id": days}

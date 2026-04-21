@@ -59,6 +59,20 @@ func (m *msgServer) PullMessageBySeqs(ctx context.Context, req *sdkws.PullMessag
 				log.ZWarn(ctx, "not have msgs", nil, "conversationID", seq.ConversationID, "seq", seq)
 				continue
 			}
+
+			// Process E2EE decryption for incoming messages
+			if m.e2eeProcessor != nil {
+				for _, msg := range msgs {
+					decrypted, err := m.e2eeProcessor.ProcessIncomingMessage(ctx, msg)
+					if err != nil {
+						log.ZWarn(ctx, "E2EE decryption failed", err, "msgID", msg.ClientMsgID)
+						// Continue with ciphertext if decryption fails
+					} else if decrypted {
+						log.ZDebug(ctx, "Message decrypted with E2EE", "msgID", msg.ClientMsgID)
+					}
+				}
+			}
+
 			resp.Msgs[seq.ConversationID] = &sdkws.PullMsgs{Msgs: msgs, IsEnd: isEnd}
 		} else {
 			var seqs []int64

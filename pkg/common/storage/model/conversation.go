@@ -37,4 +37,12 @@ type Conversation struct {
 	IsMsgDestruct         bool      `bson:"is_msg_destruct"`
 	MsgDestructTime       int64     `bson:"msg_destruct_time"`
 	LatestMsgDestructTime time.Time `bson:"latest_msg_destruct_time"`
+	RetentionDays         int64     `bson:"retention_days"` // 消息保留天数，0表示使用默认配置
+	// BurnAfterReading enables burn-after-reading for the entire conversation.
+	// When a message is read, it will be automatically deleted after the specified duration.
+	BurnAfterReading bool `bson:"burn_after_reading"`
+	// BurnAfterReadingSeconds specifies the duration in seconds before a read message is burned.
+	// Valid values: 5, 30, 60 (1min), 300 (5min), 3600 (1hour), 86400 (24hours).
+	// Default: 30 seconds when BurnAfterReading is enabled but this is 0.
+	BurnAfterReadingSeconds int32 `bson:"burn_after_reading_seconds"`
 }

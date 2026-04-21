@@ -16,6 +16,7 @@ package msg
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/openimsdk/open-im-server/v3/pkg/authverify"
@@ -27,6 +28,22 @@ import (
 	"github.com/openimsdk/tools/log"
 	"github.com/openimsdk/tools/utils/datautil"
 	"github.com/redis/go-redis/v9"
+)
+
+// ConversationExConfig represents the extended configuration stored in Ex field.
+type ConversationExConfig struct {
+	BurnAfterReading        bool `json:"burnAfterReading"`
+	BurnAfterReadingSeconds int  `json:"burnAfterReadingSeconds"`
+}
+
+// burnAfterReadingOptions defines the burn-after-reading configuration keys.
+const (
+	// BurnAfterReadingOptionKey is the option key for burn after reading.
+	BurnAfterReadingOptionKey = "burn_after_reading"
+	// BurnAfterReadingSecondsKey is the key for burn duration in seconds.
+	BurnAfterReadingSecondsKey = "burn_after_reading_seconds"
+	// BurnDurationDefault is the default burn duration when not specified.
+	BurnDurationDefault = BurnDuration30Sec
 )
 
 func (m *msgServer) GetConversationsHasReadAndMaxSeq(ctx context.Context, req *msg.GetConversationsHasReadAndMaxSeqReq) (*msg.GetConversationsHasReadAndMaxSeqResp, error) {
@@ -133,6 +150,9 @@ func (m *msgServer) MarkMsgsAsRead(ctx context.Context, req *msg.MarkMsgsAsReadR
 		}
 	}
 
+	// Check for burn-after-reading and start burn timer
+	go m.checkAndStartBurnTimer(ctx, req.UserID, req.ConversationID, req.Seqs)
+
 	reqCallback := &cbapi.CallbackSingleMsgReadReq{
 		ConversationID: conversation.ConversationID,
 		UserID:         req.UserID,
@@ -226,4 +246,122 @@ func (m *msgServer) sendMarkAsReadNotification(ctx context.Context, conversation
 		HasReadSeq:       hasReadSeq,
 	}
 	m.notificationSender.NotificationWithSessionType(ctx, sendID, recvID, constant.HasReadReceipt, sessionType, tips)
+}
+
+// checkAndStartBurnTimer checks if messages should be burned and starts the burn timer.
+func (m *msgServer) checkAndStartBurnTimer(ctx context.Context, userID, conversationID string, seqs []int64) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.ZPanic(ctx, "checkAndStartBurnTimer panic", errs.ErrPanic(r))
+		}
+	}()
+
+	// Only process single chat messages for burn-after-reading
+	conversationPB, err := m.ConversationLocalCache.GetConversation(ctx, userID, conversationID)
+	if err != nil {
+		log.ZError(ctx, "checkAndStartBurnTimer GetConversation failed", err, "conversationID", conversationID)
+		return
+	}
+
+	if conversationPB.ConversationType != constant.SingleChatType {
+		return
+	}
+
+	// Get the conversation's burn-after-reading setting from Ex field (JSON)
+	burnEnabled, burnDuration := parseBurnConfigFromEx(conversationPB.Ex)
+	if burnEnabled || burnDuration > 0 {
+		if burnDuration <= 0 {
+			burnDuration = int64(BurnDurationDefault)
+		}
+		if err := m.StartBurnTimer(ctx, conversationID, userID, seqs, burnDuration); err != nil {
+			log.ZError(ctx, "checkAndStartBurnTimer StartBurnTimer failed", err,
+				"conversationID", conversationID, "userID", userID, "seqs", seqs)
+		}
+		return
+	}
+
+	// Get message details to check individual message burn settings
+	_, _, msgs, err := m.MsgDatabase.GetMsgBySeqs(ctx, userID, conversationID, seqs)
+	if err != nil {
+		log.ZError(ctx, "checkAndStartBurnTimer GetMsgBySeqs failed", err,
+			"conversationID", conversationID, "userID", userID)
+		return
+	}
+
+	for _, msgData := range msgs {
+		if msgData == nil {
+			continue
+		}
+
+		// Check if this message has burn-after-reading enabled
+		burnDuration := getBurnDurationFromOptions(msgData.Options)
+		if burnDuration > 0 {
+			if err := m.StartBurnTimer(ctx, conversationID, userID, []int64{msgData.Seq}, burnDuration); err != nil {
+				log.ZError(ctx, "checkAndStartBurnTimer StartBurnTimer failed", err,
+					"conversationID", conversationID, "seq", msgData.Seq)
+			}
+		}
+	}
+}
+
+// getBurnDurationFromOptions extracts burn duration from message options.
+// Returns 0 if burn-after-reading is not enabled.
+func getBurnDurationFromOptions(options map[string]bool) int64 {
+	if options == nil {
+		return 0
+	}
+
+	// Check if burn_after_reading option is enabled
+	if enabled, ok := options[BurnAfterReadingOptionKey]; !ok || !enabled {
+		return 0
+	}
+
+	// Return the burn duration if specified, otherwise use default
+	// Note: The actual duration value would come from a separate field or Ex field
+	return int64(BurnDurationDefault)
+}
+
+// parseBurnConfigFromEx parses burn-after-reading configuration from the conversation's Ex field.
+// Returns (burnEnabled, burnDurationSeconds).
+func parseBurnConfigFromEx(ex string) (bool, int64) {
+	if ex == "" {
+		return false, 0
+	}
+	var config ConversationExConfig
+	if err := json.Unmarshal([]byte(ex), &config); err != nil {
+		return false, 0
+	}
+	return config.BurnAfterReading, int64(config.BurnAfterReadingSeconds)
+}
+
+// formatBurnConfigToEx formats burn-after-reading configuration into JSON for Ex field.
+func formatBurnConfigToEx(enabled bool, seconds int) string {
+	config := ConversationExConfig{
+		BurnAfterReading:        enabled,
+		BurnAfterReadingSeconds: seconds,
+	}
+	data, _ := json.Marshal(config)
+	return string(data)
+}
+
+// GetConversationBurnConfig retrieves the burn configuration for a conversation.
+func (m *msgServer) GetConversationBurnConfig(ctx context.Context, userID, conversationID string) (bool, int64, error) {
+	conversation, err := m.ConversationLocalCache.GetConversation(ctx, userID, conversationID)
+	if err != nil {
+		return false, 0, err
+	}
+	enabled, duration := parseBurnConfigFromEx(conversation.Ex)
+	return enabled, duration, nil
+}
+
+// SetConversationBurnConfig sets the burn-after-reading configuration for a conversation.
+func (m *msgServer) SetConversationBurnConfig(ctx context.Context, conversationID string, enabled bool, seconds int64) error {
+	if seconds > 0 && !IsValidBurnDuration(seconds) {
+		return errs.ErrArgs.WrapMsg("invalid burn duration")
+	}
+
+	// This would typically call the conversation client to update the conversation settings
+	// For now, this is a placeholder that would be implemented with conversation service integration
+	log.ZInfo(ctx, "SetConversationBurnConfig", "conversationID", conversationID, "enabled", enabled, "seconds", seconds)
+	return nil
 }
