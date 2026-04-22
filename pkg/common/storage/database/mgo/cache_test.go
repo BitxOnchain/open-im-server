@@ -15,6 +15,7 @@ import (
 )
 
 func TestName1111(t *testing.T) {
+	requireIntegration(t)
 	coll := Mongodb().Collection("temp")
 
 	//updatePipeline := mongo.Pipeline{
@@ -56,6 +57,7 @@ func TestName1111(t *testing.T) {
 }
 
 func TestName33333(t *testing.T) {
+	requireIntegration(t)
 	c, err := NewCacheMgo(Mongodb())
 	if err != nil {
 		panic(err)
@@ -82,7 +84,7 @@ func TestName33333(t *testing.T) {
 }
 
 func TestName1111aa(t *testing.T) {
-
+	requireIntegration(t)
 	c, err := NewCacheMgo(Mongodb())
 	if err != nil {
 		panic(err)

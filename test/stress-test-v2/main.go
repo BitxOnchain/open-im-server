@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -161,7 +162,7 @@ func (st *StressTest) PostRequest(ctx context.Context, url string, reqbody any) 
 	}
 
 	if baseResp.ErrCode != 0 {
-		err = fmt.Errorf(baseResp.ErrMsg)
+		err = errors.New(baseResp.ErrMsg)
 		// log.ZError(ctx, "Failed to send request", err, "url", url, "reqbody", reqbody, "resp", baseResp)
 		return nil, err
 	}

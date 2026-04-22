@@ -17,6 +17,7 @@ db: 0
 maxRetry: 10
 */
 func TestName111111(t *testing.T) {
+	requireIntegration(t)
 	conf := config.Redis{
 		Address: []string{
 			"172.16.8.124:7001",
@@ -35,7 +36,7 @@ func TestName111111(t *testing.T) {
 	defer cancel()
 	rdb, err := redisutil.NewRedisClient(ctx, conf.Build())
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	online := NewUserOnline(rdb)
 

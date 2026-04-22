@@ -15,7 +15,9 @@ import (
 	"time"
 )
 
-func newTestOnline() *userOnline {
+func newTestOnline(t *testing.T) *userOnline {
+	t.Helper()
+	requireIntegration(t)
 	opt := &redis.Options{
 		Addr:     "172.16.8.48:16379",
 		Password: "openIM123",
@@ -23,13 +25,13 @@ func newTestOnline() *userOnline {
 	}
 	rdb := redis.NewClient(opt)
 	if err := rdb.Ping(context.Background()).Err(); err != nil {
-		panic(err)
+		t.Fatalf("redis: %v", err)
 	}
 	return &userOnline{rdb: rdb, expire: time.Hour, channelName: "user_online"}
 }
 
 func TestOnline(t *testing.T) {
-	ts := newTestOnline()
+	ts := newTestOnline(t)
 	var count atomic.Int64
 	for i := 0; i < 64; i++ {
 		go func(userID string) {
@@ -55,17 +57,17 @@ func TestOnline(t *testing.T) {
 }
 
 func TestGetOnline(t *testing.T) {
-	ts := newTestOnline()
+	ts := newTestOnline(t)
 	ctx := context.Background()
 	pIDs, err := ts.GetOnline(ctx, "10000")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	t.Log(pIDs)
 }
 
 func TestRecvOnline(t *testing.T) {
-	ts := newTestOnline()
+	ts := newTestOnline(t)
 	ctx := context.Background()
 	pubsub := ts.rdb.Subscribe(ctx, cachekey.OnlineChannel)
 
@@ -82,6 +84,7 @@ func TestRecvOnline(t *testing.T) {
 }
 
 func TestName1(t *testing.T) {
+	requireIntegration(t)
 	opt := &redis.Options{
 		Addr:     "172.16.8.48:16379",
 		Password: "openIM123",
@@ -94,17 +97,17 @@ func TestName1(t *testing.T) {
 			ApplyURI("mongodb://openIM:openIM123@172.16.8.48:37017/openim_v3?maxPoolSize=100").
 			SetConnectTimeout(5*time.Second))
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	model, err := mgo2.NewSeqUserMongo(mgo.Database("openim_v3"))
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	seq := NewSeqUserCacheRedis(rdb, model)
 
 	res, err := seq.GetUserReadSeqs(context.Background(), "2110910952", []string{"sg_345762580", "2000", "3000"})
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	t.Log(res)
 

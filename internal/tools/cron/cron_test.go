@@ -2,6 +2,7 @@ package cron
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/openimsdk/open-im-server/v3/pkg/common/config"
@@ -17,6 +18,9 @@ import (
 )
 
 func TestName(t *testing.T) {
+	if os.Getenv("OPENIM_INTEGRATION_TEST") != "1" {
+		t.Skip("set OPENIM_INTEGRATION_TEST=1 with local etcd and RPCs (e.g. docker compose + mage) to run")
+	}
 	conf := &config.Discovery{
 		Enable: config.ETCD,
 		Etcd: config.Etcd{

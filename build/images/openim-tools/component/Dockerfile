@@ -16,7 +16,7 @@
 
 # # Set go mod installation source and proxy
 
-# FROM golang:1.20 AS builder
+# FROM golang:1.25.0 AS builder
 
 # 
 
@@ -48,8 +48,8 @@
 # ENTRYPOINT ["bash", "-c", "component -c $OPENIM_SERVER_CONFIG_NAME"]
 
 
-# Use Go 1.22 Alpine as the base image for building the application
-FROM golang:1.22-alpine AS builder
+# Use Go 1.25.0 Alpine as the base image for building the application
+FROM golang:1.25.0-alpine AS builder
 # Define the base directory for the application as an environment variable
 ENV SERVER_DIR=/openim-server
 
@@ -75,7 +75,7 @@ RUN go install github.com/magefile/mage@v1.15.0
 RUN mage build check-free-memory seq || true
 
 # Using Alpine Linux with Go environment for the final image
-FROM golang:1.22-alpine
+FROM golang:1.25.0-alpine
 
 # Install necessary packages, such as bash
 RUN apk add bash

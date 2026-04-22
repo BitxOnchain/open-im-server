@@ -10,6 +10,7 @@ import (
 )
 
 func TestName(t *testing.T) {
+	requireIntegration(t)
 	//var rocks rockscache.Client
 	//rdb := getRocksCacheRedisClient(&rocks)
 	//t.Log(rdb == nil)

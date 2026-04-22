@@ -17,7 +17,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"reflect"
 	"testing"
 
 	"github.com/likexian/gokit/assert"
@@ -53,56 +52,28 @@ labels:
 }
 
 func Test_fetchYaml(t *testing.T) {
-	type args struct {
-		sourceYaml []byte
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *yaml.Node
-		wantErr bool
-	}{
-		{
-			name: "Valid YAML",
-			args: args{sourceYaml: []byte("key: value")},
-			want: &yaml.Node{
-				Kind:  yaml.MappingNode,
-				Tag:   "!!map",
-				Value: "",
-				Content: []*yaml.Node{
-					{
-						Kind:  yaml.ScalarNode,
-						Tag:   "!!str",
-						Value: "key",
-					},
-					{
-						Kind:  yaml.ScalarNode,
-						Tag:   "!!str",
-						Value: "value",
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name:    "Invalid YAML",
-			args:    args{sourceYaml: []byte("key:")},
-			want:    nil,
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := fetchYaml(tt.args.sourceYaml)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("fetchYaml() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("fetchYaml() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	t.Run("Valid YAML", func(t *testing.T) {
+		got, err := fetchYaml([]byte("key: value"))
+		if err != nil {
+			t.Fatalf("fetchYaml() = %v", err)
+		}
+		if got == nil || got.Kind != yaml.DocumentNode || len(got.Content) == 0 {
+			t.Fatalf("expected document root, got %v", got)
+		}
+		m := got.Content[0]
+		if m.Kind != yaml.MappingNode || len(m.Content) != 2 {
+			t.Fatalf("expected one map of two scalars, got kind=%d len=%d", m.Kind, len(m.Content))
+		}
+		if m.Content[0].Value != "key" || m.Content[1].Value != "value" {
+			t.Fatalf("unexpected map content: %q %q", m.Content[0].Value, m.Content[1].Value)
+		}
+	})
+	t.Run("Invalid YAML", func(t *testing.T) {
+		_, err := fetchYaml([]byte("a: *undefined\n"))
+		if err == nil {
+			t.Fatal("expected error for undefined anchor")
+		}
+	})
 }
 
 func Test_streamYaml(t *testing.T) {

@@ -13,14 +13,16 @@ import (
 	"time"
 )
 
-func newTestSeq() *seqConversationCacheRedis {
+func newTestSeq(t *testing.T) *seqConversationCacheRedis {
+	t.Helper()
+	requireIntegration(t)
 	mgocli, err := mongo.Connect(context.Background(), options.Client().ApplyURI("mongodb://openIM:openIM123@127.0.0.1:37017/openim_v3?maxPoolSize=100").SetConnectTimeout(5*time.Second))
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	model, err := mgo.NewSeqConversationMongo(mgocli.Database("openim_v3"))
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	opt := &redis.Options{
 		Addr:     "127.0.0.1:16379",
@@ -29,13 +31,13 @@ func newTestSeq() *seqConversationCacheRedis {
 	}
 	rdb := redis.NewClient(opt)
 	if err := rdb.Ping(context.Background()).Err(); err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	return NewSeqConversationCacheRedis(rdb, model).(*seqConversationCacheRedis)
 }
 
 func TestSeq(t *testing.T) {
-	ts := newTestSeq()
+	ts := newTestSeq(t)
 	var (
 		wg    sync.WaitGroup
 		speed atomic.Int64
@@ -85,7 +87,7 @@ func TestSeq(t *testing.T) {
 }
 
 func TestDel(t *testing.T) {
-	ts := newTestSeq()
+	ts := newTestSeq(t)
 	for i := 1; i < 100; i++ {
 		var size int64 = 100
 		first, err := ts.Malloc(context.Background(), "100", size)
@@ -99,22 +101,22 @@ func TestDel(t *testing.T) {
 }
 
 func TestSeqMalloc(t *testing.T) {
-	ts := newTestSeq()
+	ts := newTestSeq(t)
 	t.Log(ts.GetMaxSeq(context.Background(), "100"))
 }
 
 func TestMinSeq(t *testing.T) {
-	ts := newTestSeq()
+	ts := newTestSeq(t)
 	t.Log(ts.GetMinSeq(context.Background(), "10000000"))
 }
 
 func TestMalloc(t *testing.T) {
-	ts := newTestSeq()
+	ts := newTestSeq(t)
 	t.Log(ts.mallocTime(context.Background(), "10000000", 100))
 }
 
 func TestHMGET(t *testing.T) {
-	ts := newTestSeq()
+	ts := newTestSeq(t)
 	res, err := ts.GetCacheMaxSeqWithTime(context.Background(), []string{"10000000", "123456"})
 	if err != nil {
 		panic(err)
@@ -123,18 +125,18 @@ func TestHMGET(t *testing.T) {
 }
 
 func TestGetMaxSeqWithTime(t *testing.T) {
-	ts := newTestSeq()
+	ts := newTestSeq(t)
 	t.Log(ts.GetMaxSeqWithTime(context.Background(), "10000000"))
 }
 
 func TestGetMaxSeqWithTime1(t *testing.T) {
-	ts := newTestSeq()
+	ts := newTestSeq(t)
 	t.Log(ts.GetMaxSeqsWithTime(context.Background(), []string{"10000000", "12345", "111"}))
 }
 
 //
 //func TestHMGET(t *testing.T) {
-//	ts := newTestSeq()
+//	ts := newTestSeq(t)
 //	res, err := ts.rdb.HMGet(context.Background(), "MALLOC_SEQ:1", "CURR", "TIME1").Result()
 //	if err != nil {
 //		panic(err)

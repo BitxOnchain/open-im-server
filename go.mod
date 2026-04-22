@@ -1,5 +1,6 @@
 module github.com/openimsdk/open-im-server/v3
 
+// 语言版本与仓库根 .go-version、backend/go.mod 保持一致，勿单独改版本。
 go 1.25.0
 
 require (
@@ -225,6 +226,6 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	go.uber.org/zap v1.24.0 // indirect
-	golang.org/x/crypto v0.32.0 // indirect
+	golang.org/x/crypto v0.32.0
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
