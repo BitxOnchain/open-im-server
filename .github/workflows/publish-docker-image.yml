@@ -14,7 +14,7 @@ on:
         default: "v3.8.3"
 
 env:
-  GO_VERSION: "1.25.0"
+  GO_VERSION: "1.24.3"
   IMAGE_NAME: "openim-server"
   # IMAGE_NAME: ${{ github.event.repository.name }}
   DOCKER_BUILDKIT: 1

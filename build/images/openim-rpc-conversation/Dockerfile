@@ -1,5 +1,5 @@
-# Use Go 1.25.0 Alpine as the base image for building the application
-FROM golang:1.25.0-alpine AS builder
+# Use Go 1.24.3 Alpine as the base image for building the application
+FROM golang:1.24.3-alpine AS builder
 # Define the base directory for the application as an environment variable
 ENV SERVER_DIR=/openim-server
 

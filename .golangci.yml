@@ -287,7 +287,7 @@ linters-settings:
 
   gofumpt:
     # Select the Go version to target. The default is `1.18`.
-    go-version: "1.25.0"
+    go-version: "1.24.3"
 
     # Choose whether or not to use the extra rules that are disabled
     # by default
@@ -428,7 +428,7 @@ linters-settings:
 
   gosimple:
     # Select the Go version to target. The default is '1.13'.
-    go: "1.25.0"
+    go: "1.24.3"
     # https://staticcheck.io/docs/options#checks
     checks: [ "all" ]
 
@@ -610,13 +610,13 @@ linters-settings:
 
   staticcheck:
     # Select the Go version to target. The default is '1.13'.
-    go: "1.25.0"
+    go: "1.24.3"
     # https://staticcheck.io/docs/options#checks
     checks: [ "all" ]
 
   stylecheck:
     # Select the Go version to target. The default is '1.13'.
-    go: "1.25.0"
+    go: "1.24.3"
 
     # https://staticcheck.io/docs/options#checks
     checks: [ "all", "-ST1000", "-ST1003", "-ST1016", "-ST1020", "-ST1021", "-ST1022" ]
